@@ -3,3 +3,9 @@ export type { ResourceAmounts, ResourceSnapshot } from "./domain/resource/Resour
 export { ResourceInventory } from "./domain/resource/ResourceInventory.ts";
 export { Player } from "./domain/player/Player.ts";
 export type { TokenAmounts, PlayerInitialState } from "./domain/player/Player.ts";
+export { ResourceAcquisition } from "./domain/resource/ResourceAcquisition.ts";
+export type { AcquisitionChoice, AcquisitionDisclosure } from "./domain/resource/ResourceAcquisition.ts";
+export { Turn } from "./domain/turn/Turn.ts";
+export type { TurnPhase, PublicTurnState } from "./domain/turn/Turn.ts";
+export { TurnManager } from "./application/TurnManager.ts";
+export type { PlayerSetup, PublicPlayerState, PrivatePlayerState, PublicTurnManagerState } from "./application/TurnManager.ts";
