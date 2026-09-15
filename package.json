@@ -10,7 +10,8 @@
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "demo": "node examples/resource-turn.ts"
+    "demo": "node examples/resource-turn.ts",
+    "demo:turn": "node examples/turn-flow.ts"
   },
   "devDependencies": {
     "typescript": "5.9.3"
