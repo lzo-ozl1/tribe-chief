@@ -153,8 +153,8 @@ MVP 이후:
 - `basicResources`는 소유자/엔진용 스냅샷이다. 공개 조회는 `TurnManager.publicState()`에서 별도로 구성한다.
 
 ## 16. 획득 및 턴 순환
-- `AcquisitionChoice`: `DISTINCT_THREE`(서로 다른 세 자원과 그중 공개할 한 종류) 또는 `PAIR_AND_LIVESTOCK`(기본 자원 한 종류)
-- `ResourceAcquisition`: 선택 전체를 검증한 불변 객체. 내부 토큰 내역과 공개할 한 종류/가축 획득 수를 구분한다.
+- `AcquisitionChoice`: `DISTINCT_THREE`(서로 다른 세 자원과 그중 공개할 서로 다른 두 종류) 또는 `PAIR_AND_LIVESTOCK`(기본 자원 한 종류)
+- `ResourceAcquisition`: 선택 전체를 검증한 불변 객체. 내부 토큰 내역과 공개할 자원 종류 배열(`resourceTypes`)/가축 획득 수를 구분한다. 서로 다른 3종 획득 시 2종, 같은 자원 2개+가축 획득 시 1종을 공개한다.
 - `Turn`: 현재 플레이어, 획득 전/후/종료 상태와 현재 턴의 공개 정보를 관리한다.
 - `TurnManager`: 전달받은 2–6명 순서로 턴을 순환하고 마지막 플레이어 종료 시 라운드를 증가시킨다. 입력 상태는 복사하며 변경 가능한 Player를 외부에 반환하지 않는다.
 - 턴/라운드 번호는 1부터 시작한다. 이는 구현상의 표시 규약이며 승리 판정의 라운드 종료 규칙을 확정하지 않는다.

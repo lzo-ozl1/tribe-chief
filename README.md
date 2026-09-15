@@ -120,7 +120,7 @@ const turns = new TurnManager([{ playerId: "p1" }, { playerId: "p2" }]);
 turns.acquire("p1", {
   kind: "DISTINCT_THREE",
   resources: ["FIRE", "WATER", "STONE"],
-  revealedResource: "FIRE",
+  revealedResources: ["FIRE", "WATER"],
 });
 turns.endTurn("p1");
 turns.acquire("p2", { kind: "PAIR_AND_LIVESTOCK", resource: "FOOD" });
@@ -135,3 +135,8 @@ console.log(turns.publicState().round); // 2
 - `publicState()`는 점수, 가축 수, 현재 턴 정보와 공개된 자원 종류만 제공합니다. 기본 자원의 보유량, 숨겨진 선택, 총 보유량은 포함하지 않습니다.
 - `privatePlayerState(id)`는 신뢰된 엔진/소유자용 조회입니다. 네트워크 연결 시 인증된 사용자와 플레이어 ID의 대응 검증이 별도로 필요합니다.
 - 현재 흐름은 `AWAITING_ACQUISITION → AFTER_ACQUISITION → ENDED`입니다. 전체 게임의 공격·구매·유지·부족장·승리 판정을 수행하지 않으며, 가축을 포함한 완전한 게임 규칙 검증용으로 사용할 수는 없습니다.
+
+### 자원 공개 규칙
+- 서로 다른 자원 3종 획득: 가져온 3종 중 서로 다른 2종을 `revealedResources`로 지정해 공개합니다. 나머지 1종은 비공개입니다.
+- 같은 자원 2개 + 가축 1개 획득: 해당 기본 자원 1종을 공개합니다.
+- 공개 결과는 `resourceTypes` 배열입니다. 기본 자원의 전체 보유량은 공개하지 않습니다.

@@ -2,20 +2,21 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Player, ResourceAcquisition, Turn, TurnManager, RESOURCE_TYPES } from "../src/index.ts";
 
-const distinct = () => ({ kind: "DISTINCT_THREE", resources: ["FIRE", "WATER", "STONE"], revealedResource: "FIRE" });
+const distinct = () => ({ kind: "DISTINCT_THREE", resources: ["FIRE", "WATER", "STONE"], revealedResources: ["FIRE", "WATER"] });
 const pair = resource => ({ kind: "PAIR_AND_LIVESTOCK", resource });
 const setup = () => [{ playerId: "p1", resources: { WOOD: 7, FOOD: 6 }, livestock: 2 }, { playerId: "p2" }];
 const state = manager => ({ public: manager.publicState(), private: ["p1", "p2"].map(id => manager.privatePlayerState(id)) });
 
-test("every distinct resource triple and each valid reveal grants exactly three tokens", () => {
+test("every distinct resource triple and each two-type reveal grants exactly three tokens", () => {
   for (let i = 0; i < RESOURCE_TYPES.length; i++) {
     for (let j = i + 1; j < RESOURCE_TYPES.length; j++) {
       for (let k = j + 1; k < RESOURCE_TYPES.length; k++) {
         const resources = [RESOURCE_TYPES[i], RESOURCE_TYPES[j], RESOURCE_TYPES[k]];
-        for (const revealedResource of resources) {
-          const acquisition = new ResourceAcquisition({ kind: "DISTINCT_THREE", resources, revealedResource });
+        for (const hiddenResource of resources) {
+          const revealedResources = resources.filter(type => type !== hiddenResource);
+          const acquisition = new ResourceAcquisition({ kind: "DISTINCT_THREE", resources, revealedResources });
           assert.deepEqual(acquisition.tokens, { resources: Object.fromEntries(resources.map(r => [r, 1])), livestock: 0 });
-          assert.deepEqual(acquisition.disclosure, { resourceType: revealedResource, livestockGained: 0 });
+          assert.deepEqual(acquisition.disclosure, { resourceTypes: revealedResources, livestockGained: 0 });
         }
       }
     }
@@ -26,7 +27,7 @@ test("all five pair choices grant two basic tokens and one livestock", () => {
   for (const resource of RESOURCE_TYPES) {
     const acquisition = new ResourceAcquisition(pair(resource));
     assert.deepEqual(acquisition.tokens, { resources: { [resource]: 2 }, livestock: 1 });
-    assert.deepEqual(acquisition.disclosure, { resourceType: resource, livestockGained: 1 });
+    assert.deepEqual(acquisition.disclosure, { resourceTypes: [resource], livestockGained: 1 });
   }
 });
 
@@ -40,8 +41,17 @@ test("invalid acquisitions preserve player, phase and public information and all
     { ...distinct(), resources: ["FIRE", "WATER", "STONE", "FOOD"] },
     { ...distinct(), resources: ["FIRE", "WATER", "GOLD"] },
     { ...distinct(), resources: new Array(3) },
-    { ...distinct(), revealedResource: "FOOD" },
-    { ...distinct(), revealedResource: undefined },
+    { ...distinct(), revealedResources: ["FIRE", "FOOD"] },
+    { ...distinct(), revealedResources: undefined },
+    { ...distinct(), revealedResources: null },
+    { ...distinct(), revealedResources: "FIRE" },
+    { ...distinct(), revealedResources: [] },
+    { ...distinct(), revealedResources: ["FIRE"] },
+    { ...distinct(), revealedResources: ["FIRE", "WATER", "STONE"] },
+    { ...distinct(), revealedResources: ["FIRE", "FIRE"] },
+    { ...distinct(), revealedResources: ["FIRE", "GOLD"] },
+    { ...distinct(), revealedResources: new Array(2) },
+    { kind: "DISTINCT_THREE", resources: distinct().resources, revealedResource: "FIRE" },
   ];
   for (const choice of invalid) {
     assert.throws(() => manager.acquire("p1", choice));
@@ -99,10 +109,10 @@ test("two to six players rotate in supplied order and round increments only at w
   }
 });
 
-test("public JSON exposes only the chosen type, livestock and score", () => {
+test("public JSON exposes the two revealed types and hides the third", () => {
   const manager = new TurnManager(setup());
   const disclosure = manager.acquire("p1", distinct());
-  assert.deepEqual(disclosure, { resourceType: "FIRE", livestockGained: 0 });
+  assert.deepEqual(disclosure, { resourceTypes: ["FIRE", "WATER"], livestockGained: 0 });
   assert.deepEqual(JSON.parse(JSON.stringify(manager.publicState())), {
     turnNumber: 1, round: 1,
     currentTurn: { playerId: "p1", phase: "AFTER_ACQUISITION", acquisition: disclosure },
@@ -111,15 +121,15 @@ test("public JSON exposes only the chosen type, livestock and score", () => {
       { playerId: "p2", score: 0, livestockCount: 0 },
     ],
   });
-  assert.equal(JSON.stringify(manager.publicState()).includes("WATER"), false);
-  assert.equal(manager.privatePlayerState("p1").basicResources.WATER, 1);
+  assert.equal(JSON.stringify(manager.publicState()).includes("STONE"), false);
+  assert.equal(manager.privatePlayerState("p1").basicResources.STONE, 1);
   assert.throws(() => manager.privatePlayerState("unknown"));
 });
 
 test("pair disclosure and public livestock count are updated together", () => {
   const manager = new TurnManager([{ playerId: "p1" }, { playerId: "p2" }]);
   manager.acquire("p1", pair("FOOD"));
-  assert.deepEqual(manager.publicState().currentTurn.acquisition, { resourceType: "FOOD", livestockGained: 1 });
+  assert.deepEqual(manager.publicState().currentTurn.acquisition, { resourceTypes: ["FOOD"], livestockGained: 1 });
   assert.equal(manager.publicState().players[0].livestockCount, 1);
   assert.equal(manager.privatePlayerState("p1").basicResources.FOOD, 2);
   manager.endTurn("p1");
@@ -133,9 +143,9 @@ test("mutating setup, choices and returned snapshots cannot change engine state"
   const choice = distinct();
   const disclosure = manager.acquire("p1", choice);
   choice.resources[0] = "FOOD";
-  choice.revealedResource = "FOOD";
+  choice.revealedResources[0] = "FOOD";
   const before = state(manager);
-  assert.throws(() => { disclosure.resourceType = "FOOD"; });
+  assert.throws(() => { disclosure.resourceTypes[0] = "FOOD"; });
   assert.throws(() => { manager.publicState().currentTurn.phase = "ENDED"; });
   assert.throws(() => { manager.publicState().players[0].livestockCount = 99; });
   assert.throws(() => { manager.privatePlayerState("p1").basicResources.WOOD = 99; });

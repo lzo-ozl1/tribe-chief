@@ -8,7 +8,7 @@ console.log("시작:", turns.publicState().currentTurn.playerId, "총 토큰:", 
 console.log("공개 정보:", turns.acquire("p1", {
   kind: "DISTINCT_THREE",
   resources: ["FIRE", "WATER", "STONE"],
-  revealedResource: "FIRE",
+  revealedResources: ["FIRE", "WATER"],
 }));
 console.log("획득 후:", turns.privatePlayerState("p1").totalTokens);
 turns.endTurn("p1", { resources: { WOOD: 2 }, livestock: 1 });
