@@ -14,6 +14,7 @@ export interface AcquisitionDisclosure {
 /** Validates a complete acquisition before any player state changes. */
 export class ResourceAcquisition {
   readonly #tokens: TokenAmounts;
+  readonly #publicResources: ResourceAmounts;
   readonly #disclosure: AcquisitionDisclosure;
 
   constructor(choice: AcquisitionChoice) {
@@ -53,11 +54,15 @@ export class ResourceAcquisition {
       default:
         throw new TypeError("Unknown acquisition choice");
     }
+    this.#publicResources = Object.freeze(Object.fromEntries(
+      resourceTypes.map(type => [type, livestock === 1 ? 2 : 1]),
+    ));
     this.#tokens = Object.freeze({ resources: Object.freeze(resources), livestock });
     this.#disclosure = Object.freeze({ resourceTypes: Object.freeze(resourceTypes), livestockGained: livestock });
   }
 
   /** Trusted engine data; includes hidden choices and must not be broadcast. */
+  get publicResources(): ResourceAmounts { return this.#publicResources; }
   get tokens(): TokenAmounts { return this.#tokens; }
   get disclosure(): AcquisitionDisclosure { return this.#disclosure; }
 }

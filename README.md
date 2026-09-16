@@ -72,6 +72,7 @@ npm test
 npm run build
 npm run demo
 npm run demo:turn
+npm run demo:visibility
 ```
 
 번들 pnpm을 사용하는 환경에서는 `pnpm install --frozen-lockfile` 후 `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm demo`로 실행할 수 있습니다.
@@ -132,11 +133,20 @@ console.log(turns.publicState().round); // 2
 - 턴마다 획득은 정확히 한 번이며, 현재 플레이어만 획득·종료할 수 있습니다.
 - 초과 보유 시 `endTurn(playerId, { resources: { WOOD: 2 }, livestock: 1 })`처럼 초과분을 정확히 지정합니다.
 - 잘못된 획득/폐기/종료 요청은 상태와 턴 순서를 변경하지 않습니다.
-- `publicState()`는 점수, 가축 수, 현재 턴 정보와 공개된 자원 종류만 제공합니다. 기본 자원의 보유량, 숨겨진 선택, 총 보유량은 포함하지 않습니다.
+- `publicState()`는 점수, 가축 수, 현재 턴, 공개 재고의 종류별 수량, 은닉 토큰 개수, 총 보유량을 제공합니다. 은닉분의 종류별 수량은 포함하지 않습니다.
 - `privatePlayerState(id)`는 신뢰된 엔진/소유자용 조회입니다. 네트워크 연결 시 인증된 사용자와 플레이어 ID의 대응 검증이 별도로 필요합니다.
 - 현재 흐름은 `AWAITING_ACQUISITION → AFTER_ACQUISITION → ENDED`입니다. 전체 게임의 공격·구매·유지·부족장·승리 판정을 수행하지 않으며, 가축을 포함한 완전한 게임 규칙 검증용으로 사용할 수는 없습니다.
 
 ### 자원 공개 규칙
 - 서로 다른 자원 3종 획득: 가져온 3종 중 서로 다른 2종을 `revealedResources`로 지정해 공개합니다. 나머지 1종은 비공개입니다.
 - 같은 자원 2개 + 가축 1개 획득: 해당 기본 자원 1종을 공개합니다.
-- 공개 결과는 `resourceTypes` 배열입니다. 기본 자원의 전체 보유량은 공개하지 않습니다.
+- 획득 공개 결과는 `resourceTypes` 배열이며, 공개해서 가져온 토큰은 재고에서도 계속 공개됩니다. 총 토큰 수와 은닉 개수는 공개하고 은닉분의 종류별 수량은 공개하지 않습니다.
+
+## 공개·은닉 재고
+- 공개 토큰부터 같은 종류의 비용·손실·폐기를 차감하고 부족분만 은닉분에서 차감합니다.
+- 가축은 항상 공개합니다. 은닉 10개 이상의 별도 제한은 없으며, 턴 종료 시 총 15개 제한을 따릅니다.
+- `Player.basicResources`는 합산 재고, `publicResources`와 `hiddenResources`는 각각의 재고입니다. 상대용 상태에는 `hiddenResources`를 전달하지 않습니다.
+- 초기화 시 `resources`는 총량이고 `publicResources`는 그중 공개된 양입니다. 예: `new Player("p1", { resources: { WOOD: 3 }, publicResources: { WOOD: 2 } })`는 공개 나무 2개 + 은닉 나무 1개입니다.
+- 기존 초기화 데이터에 공개 정보가 없으면 은닉으로 유지합니다. 턴 획득은 확정된 공개 규칙을 자동 적용합니다.
+- `npm run demo:visibility`는 4턴 획득 후 식량 1·돌 1·가축 1을 사용한 공개/은닉 상태를 보여줍니다.
+- 구매·공격 시스템은 아직 없으며 이번 변경은 해당 시스템이 사용할 공통 자원 차감 구조입니다.

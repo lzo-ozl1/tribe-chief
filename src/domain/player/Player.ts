@@ -1,3 +1,4 @@
+import { VisibleResourceInventory } from "../resource/VisibleResourceInventory.ts";
 import { ResourceInventory } from "../resource/ResourceInventory.ts";
 import type { ResourceAmounts, ResourceSnapshot } from "../resource/ResourceType.ts";
 import { assertCount, sumCounts } from "../shared/count.ts";
@@ -9,12 +10,14 @@ export interface TokenAmounts {
 
 export interface PlayerInitialState extends TokenAmounts {
   readonly score?: number;
+  /** Subset of resources that is currently public; omitted legacy stock stays hidden. */
+  readonly publicResources?: ResourceAmounts;
 }
 
 export class Player {
   static readonly END_TURN_TOKEN_LIMIT = 15;
   readonly #playerId: string;
-  readonly #resources: ResourceInventory;
+  readonly #resources: VisibleResourceInventory;
   #livestockCount: number;
   #score: number;
 
@@ -23,7 +26,7 @@ export class Player {
       throw new TypeError("Player ID must not be blank");
     }
     this.#playerId = playerId;
-    this.#resources = new ResourceInventory(initial.resources);
+    this.#resources = new VisibleResourceInventory(initial.resources, initial.publicResources);
     this.#livestockCount = initial.livestock ?? 0;
     this.#score = initial.score ?? 0;
     assertCount(this.#livestockCount, "Livestock");
@@ -33,6 +36,9 @@ export class Player {
 
   get playerId(): string { return this.#playerId; }
   get basicResources(): ResourceSnapshot { return this.#resources.snapshot(); }
+  get publicResources(): ResourceSnapshot { return this.#resources.publicSnapshot(); }
+  get hiddenResources(): ResourceSnapshot { return this.#resources.hiddenSnapshot(); }
+  get hiddenTokenCount(): number { return this.#resources.hiddenCount; }
   get livestockCount(): number { return this.#livestockCount; }
   get score(): number { return this.#score; }
   get totalTokens(): number { return sumCounts(this.#resources.total, this.#livestockCount); }
@@ -40,12 +46,12 @@ export class Player {
   get canEndTurn(): boolean { return this.excessTokens === 0; }
 
   // The application layer will validate turn acquisition choices and timing.
-  acquireTokens(amounts: TokenAmounts): void {
+  acquireTokens(amounts: TokenAmounts, publicResources: ResourceAmounts = {}): void {
     const resources = new ResourceInventory(amounts.resources);
     const livestock = amounts.livestock ?? 0;
     assertCount(livestock, "Livestock");
     sumCounts(this.totalTokens, resources.total, livestock);
-    this.#resources.add(resources.snapshot());
+    this.#resources.add(resources.snapshot(), publicResources);
     this.#livestockCount += livestock;
   }
 

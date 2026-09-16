@@ -32,7 +32,7 @@ export class Turn {
   acquire(playerId: string, choice: AcquisitionChoice): AcquisitionDisclosure {
     this.#assertActorAndPhase(playerId, "AWAITING_ACQUISITION");
     const acquisition = new ResourceAcquisition(choice);
-    this.#player.acquireTokens(acquisition.tokens);
+    this.#player.acquireTokens(acquisition.tokens, acquisition.publicResources);
     this.#acquisition = acquisition.disclosure;
     this.#phase = "AFTER_ACQUISITION";
     return this.#acquisition;

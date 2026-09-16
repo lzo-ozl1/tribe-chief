@@ -14,11 +14,14 @@ export interface PublicPlayerState {
   readonly playerId: string;
   readonly score: number;
   readonly livestockCount: number;
+  readonly publicResources: ResourceSnapshot;
+  readonly hiddenTokenCount: number;
+  readonly totalTokens: number;
 }
 
 export interface PrivatePlayerState extends PublicPlayerState {
   readonly basicResources: ResourceSnapshot;
-  readonly totalTokens: number;
+  readonly hiddenResources: ResourceSnapshot;
   readonly excessTokens: number;
 }
 
@@ -58,6 +61,9 @@ export class TurnManager {
         playerId: player.playerId,
         score: player.score,
         livestockCount: player.livestockCount,
+        publicResources: player.publicResources,
+        hiddenTokenCount: player.hiddenTokenCount,
+        totalTokens: player.totalTokens,
       }))),
     });
   }
@@ -70,8 +76,11 @@ export class TurnManager {
       playerId: player.playerId,
       score: player.score,
       livestockCount: player.livestockCount,
-      basicResources: player.basicResources,
+      publicResources: player.publicResources,
+      hiddenTokenCount: player.hiddenTokenCount,
       totalTokens: player.totalTokens,
+      basicResources: player.basicResources,
+      hiddenResources: player.hiddenResources,
       excessTokens: player.excessTokens,
     });
   }
