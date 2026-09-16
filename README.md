@@ -57,7 +57,7 @@
 
 TypeScript 기반 자원·플레이어 모델과 자원 획득/턴 순환 모듈을 제공합니다.
 2–6명이 지정된 순서로 두 가지 획득 방식 중 하나를 선택하고, 턴 종료 시 보유 한도를 맞춘 뒤 다음 플레이어로 진행할 수 있습니다.
-일반 공격과 자동 방어를 지원합니다. 게임 화면, 스킬·구매·유지·부족장·승리 판정을 포함한 전체 게임 엔진은 후속 개발 단계입니다.
+일반 공격·자동 방어, 테스트 덱 시장과 턴당 1장 구매를 지원합니다. 게임 화면, 실제 스킬 배정·사용, 가축 유지·부족장·승리 판정을 포함한 전체 게임 엔진은 후속 개발 단계입니다.
 
 구현은 각 단계별 계획을 사용자에게 먼저 제시하고 승인을 받은 후 진행합니다.
 
@@ -74,6 +74,7 @@ npm run demo
 npm run demo:turn
 npm run demo:visibility
 npm run demo:combat
+npm run demo:purchase
 ```
 
 번들 pnpm을 사용하는 환경에서는 `pnpm install --frozen-lockfile` 후 `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm demo`로 실행할 수 있습니다.
@@ -111,7 +112,7 @@ player.assertCanEndTurn(); // 총 15개: 보유량 조건 충족
 ```
 
 `Player`는 기본 모델 API이고, 획득 선택지와 중복 획득 제한은 `Turn`/`TurnManager`를 통해 적용합니다.
-가축의 카드 구매 가치/유지, 스킬 전투, 카드, 부족장, 실제 네트워크 전송은 아직 구현하지 않았습니다.
+가축의 카드 구매 대체는 구현했습니다. 가축 유지, 스킬 전투, 부족장, 실제 네트워크 전송은 아직 구현하지 않았습니다.
 
 ## 턴 진행 API
 
@@ -136,7 +137,7 @@ console.log(turns.publicState().round); // 2
 - 잘못된 획득/폐기/종료 요청은 상태와 턴 순서를 변경하지 않습니다.
 - `publicState()`는 점수, 가축 수, 현재 턴, 공개 재고의 종류별 수량, 은닉 토큰 개수, 총 보유량을 제공합니다. 은닉분의 종류별 수량은 포함하지 않습니다.
 - `privatePlayerState(id)`는 신뢰된 엔진/소유자용 조회입니다. 네트워크 연결 시 인증된 사용자와 플레이어 ID의 대응 검증이 별도로 필요합니다.
-- 현재 흐름은 `AWAITING_ACQUISITION → AFTER_ACQUISITION → ENDED`입니다. 첫 단계에서 일반 공격을 최대 1회 할 수 있고, 자원 획득을 선택하면 공격 단계가 닫힙니다. 스킬·구매·유지·부족장·승리 판정은 아직 수행하지 않습니다.
+- 현재 흐름은 `AWAITING_ACQUISITION → AFTER_ACQUISITION → ENDED`입니다. 첫 단계에서 일반 공격을 최대 1회 할 수 있고, 자원 획득을 선택하면 공격 단계가 닫힙니다. 획득 후 최대 1장 구매가 가능합니다. 실제 스킬 배정·사용, 유지·부족장·승리 판정은 아직 수행하지 않습니다.
 
 ### 자원 공개 규칙
 - 서로 다른 자원 3종 획득: 가져온 3종 중 서로 다른 2종을 `revealedResources`로 지정해 공개합니다. 나머지 1종은 비공개입니다.
@@ -150,7 +151,7 @@ console.log(turns.publicState().round); // 2
 - 초기화 시 `resources`는 총량이고 `publicResources`는 그중 공개된 양입니다. 예: `new Player("p1", { resources: { WOOD: 3 }, publicResources: { WOOD: 2 } })`는 공개 나무 2개 + 은닉 나무 1개입니다.
 - 기존 초기화 데이터에 공개 정보가 없으면 은닉으로 유지합니다. 턴 획득은 확정된 공개 규칙을 자동 적용합니다.
 - `npm run demo:visibility`는 4턴 획득 후 식량 1·돌 1·가축 1을 사용한 공개/은닉 상태를 보여줍니다.
-- 일반 공격의 비용·피해는 공통 차감 구조를 사용합니다. 구매 시스템은 아직 없으며 추후 같은 구조를 사용합니다.
+- 일반 공격의 비용·피해와 구매 비용은 같은 공개분 우선 차감 구조를 사용합니다.
 
 ## 일반 공격 API
 
@@ -173,3 +174,24 @@ console.log(result.outcome);
 - 실행 예제: `npm run demo:combat`. 스킬과 부족장 점수는 아직 구현하지 않았습니다.
 
 공격 사실·공격자·상대·지정 자원·결과는 모두 공개됩니다. 은닉 불로 공격해 불이 남으면 사용한 1개가 공개로 전환됩니다. 방어에 막혀 불이 소모되면 다른 은닉 불은 공개하지 않습니다.
+
+## 점수 카드 구매와 베타 덱
+```typescript
+import { TurnManager, createBetaDeck } from "./src/index.ts";
+const turns = new TurnManager([{ playerId: "p1" }, { playerId: "p2" }], {
+  deck: createBetaDeck(20260916),
+  livestockPolicy: "BETA_SPLIT", // 비교 모드: SAME_RESOURCE
+});
+const market = turns.publicState().market;
+// 획득 이후, 보유량이 충분할 때:
+// turns.purchase("p1", market[0]!.card!.cardId, { WOOD: 1, FOOD: 1 });
+```
+
+- 가축 대체 인수는 카드 비용에서 대신 낼 자원 2개입니다. 가축 1개를 소모하며 카드당 최대 1개만 사용할 수 있습니다.
+- 구매 성공 시 비용 차감·점수 지급·구매 카드 기록·동일 등급 시장 보충을 처리합니다.
+- 3점 카드는 `pendingSkillRewards`를 1 늘립니다. 실제 스킬의 종류 배정/사용은 후속 구현입니다.
+- 기본 테스트 덱은 1점 15장, 2점 15장, 3점 10장입니다. 같은 시드이면 같은 순서로 생성됩니다. 최종 밸런스 덱은 아닙니다.
+- 해당 등급 덱 소진 시 슬롯은 비워 둡니다. 베타의 명시적인 처리이며 최종 소진 규칙은 별도 결정합니다.
+- `npm run demo:purchase`: 다른 두 자원을 가축으로 대체하여 구매하는 예제
+- `npm run analyze:livestock -- docs/LIVESTOCK_BETA_ANALYSIS.md`: 두 대체 정책의 전수 비교 재현
+- [가축 비교 결과와 분석 한계](docs/LIVESTOCK_BETA_ANALYSIS.md)
