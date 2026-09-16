@@ -115,7 +115,7 @@ test("public JSON exposes the two revealed types and hides the third", () => {
   assert.deepEqual(disclosure, { resourceTypes: ["FIRE", "WATER"], livestockGained: 0 });
   assert.deepEqual(JSON.parse(JSON.stringify(manager.publicState())), {
     turnNumber: 1, round: 1,
-    currentTurn: { playerId: "p1", phase: "AFTER_ACQUISITION", acquisition: disclosure },
+    currentTurn: { playerId: "p1", phase: "AFTER_ACQUISITION", acquisition: disclosure, attackAvailable: false, attack: null },
     players: [
       { playerId: "p1", score: 0, livestockCount: 2, publicResources: { FIRE: 1, WATER: 1, STONE: 0, WOOD: 0, FOOD: 0 }, hiddenTokenCount: 14, totalTokens: 18 },
       { playerId: "p2", score: 0, livestockCount: 0, publicResources: { FIRE: 0, WATER: 0, STONE: 0, WOOD: 0, FOOD: 0 }, hiddenTokenCount: 0, totalTokens: 0 },

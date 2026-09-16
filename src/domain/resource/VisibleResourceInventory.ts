@@ -40,6 +40,17 @@ export class VisibleResourceInventory {
     this.#hidden = nextHidden;
   }
 
+  /** Transfers existing hidden tokens to public stock without changing totals. */
+  reveal(amounts: ResourceAmounts): void {
+    const requested = new ResourceInventory(amounts);
+    const nextHidden = new ResourceInventory(this.#hidden.snapshot());
+    const nextPublic = new ResourceInventory(this.#public.snapshot());
+    nextHidden.spend(requested.snapshot());
+    nextPublic.add(requested.snapshot());
+    this.#hidden = nextHidden;
+    this.#public = nextPublic;
+  }
+
   spend(amounts: ResourceAmounts): void {
     const requested = new ResourceInventory(amounts);
     if (!new ResourceInventory(this.snapshot()).has(requested.snapshot())) {

@@ -1,3 +1,4 @@
+import type { BasicAttackTarget, BasicAttackResult } from "../domain/combat/BasicAttackResolver.ts";
 import { Player } from "../domain/player/Player.ts";
 import type { PlayerInitialState, TokenAmounts } from "../domain/player/Player.ts";
 import type { ResourceSnapshot } from "../domain/resource/ResourceType.ts";
@@ -83,6 +84,12 @@ export class TurnManager {
       hiddenResources: player.hiddenResources,
       excessTokens: player.excessTokens,
     });
+  }
+
+  attack(playerId: string, defenderId: string, target: BasicAttackTarget): BasicAttackResult {
+    const defender = this.#players.find(player => player.playerId === defenderId);
+    if (!defender) throw new Error("Unknown defender");
+    return this.#turn.attack(playerId, defender, target);
   }
 
   acquire(playerId: string, choice: AcquisitionChoice): AcquisitionDisclosure {

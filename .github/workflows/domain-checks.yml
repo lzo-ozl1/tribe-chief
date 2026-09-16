@@ -25,3 +25,4 @@ jobs:
       - run: pnpm demo
       - run: pnpm demo:turn
       - run: pnpm demo:visibility
+      - run: pnpm demo:combat
