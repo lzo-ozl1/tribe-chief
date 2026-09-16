@@ -1,3 +1,8 @@
+import { CardPurchase } from "../card/CardPurchase.ts";
+import type { CardPurchaseResult } from "../card/CardPurchase.ts";
+import type { LivestockPolicy } from "../card/PurchasePayment.ts";
+import type { ResourceAmounts } from "../resource/ResourceType.ts";
+import { Market } from "../card/Market.ts";
 import { BasicAttackResolver } from "../combat/BasicAttackResolver.ts";
 import type { BasicAttackTarget, BasicAttackResult } from "../combat/BasicAttackResolver.ts";
 import { Player } from "../player/Player.ts";
@@ -14,6 +19,8 @@ export interface PublicTurnState {
   /** Timing/frequency only; FIRE holdings are checked when an attack is requested. */
   readonly attackAvailable: boolean;
   readonly attack: BasicAttackResult | null;
+  readonly purchaseAvailable: boolean;
+  readonly purchase: CardPurchaseResult | null;
 }
 
 /** Normal attack, acquisition and end-turn slice; skills and later phases are not connected yet. */
@@ -21,6 +28,7 @@ export class Turn {
   readonly #player: Player;
   readonly #attackResolver = new BasicAttackResolver();
   #attack: BasicAttackResult | null = null;
+  #purchase: CardPurchaseResult | null = null;
   #phase: TurnPhase = "AWAITING_ACQUISITION";
   #acquisition: AcquisitionDisclosure | null = null;
 
@@ -35,6 +43,8 @@ export class Turn {
       acquisition: this.#acquisition,
       attackAvailable: this.#phase === "AWAITING_ACQUISITION" && this.#attack === null,
       attack: this.#attack,
+      purchaseAvailable: this.#phase === "AFTER_ACQUISITION" && this.#purchase === null,
+      purchase: this.#purchase,
     });
   }
 
@@ -53,6 +63,14 @@ export class Turn {
     this.#acquisition = acquisition.disclosure;
     this.#phase = "AFTER_ACQUISITION";
     return this.#acquisition;
+  }
+
+  purchase(playerId: string, market: Market, cardId: string, replacement: ResourceAmounts = {}, policy: LivestockPolicy = "BETA_SPLIT"): CardPurchaseResult {
+    this.#assertActorAndPhase(playerId, "AFTER_ACQUISITION");
+    if (this.#purchase !== null) throw new Error("Only one point card may be purchased per turn");
+    const result = CardPurchase.execute(this.#player, market, cardId, replacement, policy);
+    this.#purchase = result;
+    return result;
   }
 
   end(playerId: string, discard?: TokenAmounts): PublicTurnState {

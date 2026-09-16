@@ -12,3 +12,13 @@ export type { PlayerSetup, PublicPlayerState, PrivatePlayerState, PublicTurnMana
 export { VisibleResourceInventory } from "./domain/resource/VisibleResourceInventory.ts";
 export { BasicAttackResolver } from "./domain/combat/BasicAttackResolver.ts";
 export type { BasicAttackTarget, BasicAttackOutcome, BasicAttackResult } from "./domain/combat/BasicAttackResolver.ts";
+export { PointCard } from "./domain/card/PointCard.ts";
+export type { CardTier, PointCardSnapshot } from "./domain/card/PointCard.ts";
+export { PurchasePayment } from "./domain/card/PurchasePayment.ts";
+export type { CardPayment, LivestockPolicy } from "./domain/card/PurchasePayment.ts";
+export { createBetaDeck } from "./domain/card/BetaDeck.ts";
+export { Market } from "./domain/card/Market.ts";
+export type { MarketSlot } from "./domain/card/Market.ts";
+export { CardPurchase } from "./domain/card/CardPurchase.ts";
+export type { CardPurchaseResult } from "./domain/card/CardPurchase.ts";
+export type { TurnManagerOptions } from "./application/TurnManager.ts";

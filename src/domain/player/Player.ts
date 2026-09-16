@@ -1,3 +1,6 @@
+import { PointCard } from "../card/PointCard.ts";
+import type { PointCardSnapshot } from "../card/PointCard.ts";
+import type { CardPayment } from "../card/PurchasePayment.ts";
 import { VisibleResourceInventory } from "../resource/VisibleResourceInventory.ts";
 import { ResourceInventory } from "../resource/ResourceInventory.ts";
 import type { ResourceAmounts, ResourceSnapshot } from "../resource/ResourceType.ts";
@@ -20,6 +23,8 @@ export class Player {
   readonly #resources: VisibleResourceInventory;
   #livestockCount: number;
   #score: number;
+  #purchasedCards: readonly PointCardSnapshot[] = Object.freeze([]);
+  #pendingSkillRewards = 0;
 
   constructor(playerId: string, initial: PlayerInitialState = {}) {
     if (typeof playerId !== "string" || playerId.trim().length === 0) {
@@ -40,6 +45,8 @@ export class Player {
   get hiddenResources(): ResourceSnapshot { return this.#resources.hiddenSnapshot(); }
   get hiddenTokenCount(): number { return this.#resources.hiddenCount; }
   get livestockCount(): number { return this.#livestockCount; }
+  get purchasedCards(): readonly PointCardSnapshot[] { return this.#purchasedCards; }
+  get pendingSkillRewards(): number { return this.#pendingSkillRewards; }
   get score(): number { return this.#score; }
   get totalTokens(): number { return sumCounts(this.#resources.total, this.#livestockCount); }
   get excessTokens(): number { return Math.max(0, this.totalTokens - Player.END_TURN_TOKEN_LIMIT); }
@@ -80,6 +87,24 @@ export class Player {
 
   assertCanEndTurn(): void {
     if (!this.canEndTurn) throw new RangeError("Discard excess tokens before ending the turn");
+  }
+
+  /** Trusted coordinator supplies a validated card payment. */
+  purchasePointCard(card: PointCard, payment: CardPayment): void {
+    if (!(card instanceof PointCard)) throw new TypeError("Invalid point card");
+    if (this.#purchasedCards.some(owned => owned.cardId === card.cardId)) throw new Error("Card already owned");
+    const data = card.snapshot();
+    if (payment.livestock !== 0 && payment.livestock !== 1) throw new RangeError("Use at most one livestock");
+    const unpaid = new ResourceInventory(card.cost);
+    unpaid.spend(payment.resources);
+    if (unpaid.total !== payment.livestock * 2) throw new RangeError("Payment must match the printed cost");
+    const nextScore = sumCounts(this.#score, data.victoryPoints);
+    const nextRewards = sumCounts(this.#pendingSkillRewards, data.rewardSkillCard ? 1 : 0);
+    const nextCards = Object.freeze([...this.#purchasedCards, data]);
+    this.spendTokens(payment);
+    this.#score = nextScore;
+    this.#pendingSkillRewards = nextRewards;
+    this.#purchasedCards = nextCards;
   }
 
   addScore(points: number): void {

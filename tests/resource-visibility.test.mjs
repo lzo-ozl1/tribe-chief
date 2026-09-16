@@ -69,7 +69,7 @@ test("public views are identical for different hidden compositions with equal co
   assert.deepEqual(a.publicState(), b.publicState());
   assert.notDeepEqual(a.privatePlayerState("p1").hiddenResources, b.privatePlayerState("p1").hiddenResources);
   assert.deepEqual(a.publicState().players[0], {
-    playerId: "p1", score: 0, publicResources: counts({ WOOD: 2 }),
+    playerId: "p1", score: 0, purchasedCards: [], pendingSkillRewards: 0, publicResources: counts({ WOOD: 2 }),
     hiddenTokenCount: 3, livestockCount: 1, totalTokens: 6,
   });
   assert.equal(JSON.stringify(a.publicState()).includes("hiddenResources"), false);
