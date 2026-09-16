@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "demo": "node examples/resource-turn.ts",
-    "demo:turn": "node examples/turn-flow.ts"
+    "demo:turn": "node examples/turn-flow.ts",
+    "demo:visibility": "node examples/resource-visibility.ts"
   },
   "devDependencies": {
     "typescript": "5.9.3"

@@ -117,11 +117,12 @@ test("public JSON exposes the two revealed types and hides the third", () => {
     turnNumber: 1, round: 1,
     currentTurn: { playerId: "p1", phase: "AFTER_ACQUISITION", acquisition: disclosure },
     players: [
-      { playerId: "p1", score: 0, livestockCount: 2 },
-      { playerId: "p2", score: 0, livestockCount: 0 },
+      { playerId: "p1", score: 0, livestockCount: 2, publicResources: { FIRE: 1, WATER: 1, STONE: 0, WOOD: 0, FOOD: 0 }, hiddenTokenCount: 14, totalTokens: 18 },
+      { playerId: "p2", score: 0, livestockCount: 0, publicResources: { FIRE: 0, WATER: 0, STONE: 0, WOOD: 0, FOOD: 0 }, hiddenTokenCount: 0, totalTokens: 0 },
     ],
   });
-  assert.equal(JSON.stringify(manager.publicState()).includes("STONE"), false);
+  assert.equal(manager.publicState().players[0].publicResources.STONE, 0);
+  assert.equal(JSON.stringify(manager.publicState()).includes("hiddenResources"), false);
   assert.equal(manager.privatePlayerState("p1").basicResources.STONE, 1);
   assert.throws(() => manager.privatePlayerState("unknown"));
 });
