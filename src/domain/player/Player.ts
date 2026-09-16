@@ -55,6 +55,11 @@ export class Player {
     this.#livestockCount += livestock;
   }
 
+  /** Trusted domain operation for rules that reveal existing hidden tokens. */
+  revealResources(amounts: ResourceAmounts): void {
+    this.#resources.reveal(amounts);
+  }
+
   spendTokens(amounts: TokenAmounts): void {
     const resources = new ResourceInventory(amounts.resources);
     const livestock = amounts.livestock ?? 0;

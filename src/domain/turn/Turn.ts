@@ -1,3 +1,5 @@
+import { BasicAttackResolver } from "../combat/BasicAttackResolver.ts";
+import type { BasicAttackTarget, BasicAttackResult } from "../combat/BasicAttackResolver.ts";
 import { Player } from "../player/Player.ts";
 import type { TokenAmounts } from "../player/Player.ts";
 import { ResourceAcquisition } from "../resource/ResourceAcquisition.ts";
@@ -9,11 +11,16 @@ export interface PublicTurnState {
   readonly playerId: string;
   readonly phase: TurnPhase;
   readonly acquisition: AcquisitionDisclosure | null;
+  /** Timing/frequency only; FIRE holdings are checked when an attack is requested. */
+  readonly attackAvailable: boolean;
+  readonly attack: BasicAttackResult | null;
 }
 
-/** Acquisition/end-turn slice; attack, purchase and maintenance are not connected yet. */
+/** Normal attack, acquisition and end-turn slice; skills and later phases are not connected yet. */
 export class Turn {
   readonly #player: Player;
+  readonly #attackResolver = new BasicAttackResolver();
+  #attack: BasicAttackResult | null = null;
   #phase: TurnPhase = "AWAITING_ACQUISITION";
   #acquisition: AcquisitionDisclosure | null = null;
 
@@ -26,7 +33,17 @@ export class Turn {
       playerId: this.#player.playerId,
       phase: this.#phase,
       acquisition: this.#acquisition,
+      attackAvailable: this.#phase === "AWAITING_ACQUISITION" && this.#attack === null,
+      attack: this.#attack,
     });
+  }
+
+  attack(playerId: string, defender: Player, target: BasicAttackTarget): BasicAttackResult {
+    this.#assertActorAndPhase(playerId, "AWAITING_ACQUISITION");
+    if (this.#attack !== null) throw new Error("Attack opportunity already used");
+    const result = this.#attackResolver.resolve(this.#player, defender, target);
+    this.#attack = result;
+    return result;
   }
 
   acquire(playerId: string, choice: AcquisitionChoice): AcquisitionDisclosure {

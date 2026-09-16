@@ -10,3 +10,5 @@ export type { TurnPhase, PublicTurnState } from "./domain/turn/Turn.ts";
 export { TurnManager } from "./application/TurnManager.ts";
 export type { PlayerSetup, PublicPlayerState, PrivatePlayerState, PublicTurnManagerState } from "./application/TurnManager.ts";
 export { VisibleResourceInventory } from "./domain/resource/VisibleResourceInventory.ts";
+export { BasicAttackResolver } from "./domain/combat/BasicAttackResolver.ts";
+export type { BasicAttackTarget, BasicAttackOutcome, BasicAttackResult } from "./domain/combat/BasicAttackResolver.ts";
