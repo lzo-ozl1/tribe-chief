@@ -15,7 +15,8 @@
     "demo:visibility": "node examples/resource-visibility.ts",
     "demo:combat": "node examples/basic-combat.ts",
     "demo:purchase": "node examples/card-purchase.ts",
-    "analyze:livestock": "node scripts/analyze-livestock.mjs"
+    "analyze:livestock": "node scripts/analyze-livestock.mjs",
+    "demo:skills": "node examples/skill-turn.ts"
   },
   "devDependencies": {
     "typescript": "5.9.3"

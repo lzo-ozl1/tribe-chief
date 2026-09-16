@@ -1,3 +1,5 @@
+import { SkillInventory } from "../skill/SkillInventory.ts";
+import type { SkillAmounts, SkillSnapshot, SkillType } from "../skill/SkillInventory.ts";
 import { PointCard } from "../card/PointCard.ts";
 import type { PointCardSnapshot } from "../card/PointCard.ts";
 import type { CardPayment } from "../card/PurchasePayment.ts";
@@ -13,6 +15,7 @@ export interface TokenAmounts {
 
 export interface PlayerInitialState extends TokenAmounts {
   readonly score?: number;
+  readonly skills?: SkillAmounts;
   /** Subset of resources that is currently public; omitted legacy stock stays hidden. */
   readonly publicResources?: ResourceAmounts;
 }
@@ -21,6 +24,7 @@ export class Player {
   static readonly END_TURN_TOKEN_LIMIT = 15;
   readonly #playerId: string;
   readonly #resources: VisibleResourceInventory;
+  readonly #skills: SkillInventory;
   #livestockCount: number;
   #score: number;
   #purchasedCards: readonly PointCardSnapshot[] = Object.freeze([]);
@@ -31,6 +35,7 @@ export class Player {
       throw new TypeError("Player ID must not be blank");
     }
     this.#playerId = playerId;
+    this.#skills = new SkillInventory(initial.skills);
     this.#resources = new VisibleResourceInventory(initial.resources, initial.publicResources);
     this.#livestockCount = initial.livestock ?? 0;
     this.#score = initial.score ?? 0;
@@ -47,6 +52,17 @@ export class Player {
   get livestockCount(): number { return this.#livestockCount; }
   get purchasedCards(): readonly PointCardSnapshot[] { return this.#purchasedCards; }
   get pendingSkillRewards(): number { return this.#pendingSkillRewards; }
+  get skills(): SkillSnapshot { return this.#skills.snapshot(); }
+  get skillCardCount(): number { return this.#skills.total; }
+  hasSkill(type: SkillType): boolean { return this.#skills.has(type); }
+  spendSkill(type: SkillType): void { this.#skills.spend(type); }
+
+  receiveSkillReward(type: SkillType): void {
+    if (this.#pendingSkillRewards < 1) throw new Error("No pending skill reward");
+    this.#skills.add(type);
+    this.#pendingSkillRewards--;
+  }
+
   get score(): number { return this.#score; }
   get totalTokens(): number { return sumCounts(this.#resources.total, this.#livestockCount); }
   get excessTokens(): number { return Math.max(0, this.totalTokens - Player.END_TURN_TOKEN_LIMIT); }
