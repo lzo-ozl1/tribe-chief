@@ -115,10 +115,11 @@ test("public JSON exposes the two revealed types and hides the third", () => {
   assert.deepEqual(disclosure, { resourceTypes: ["FIRE", "WATER"], livestockGained: 0 });
   assert.deepEqual(JSON.parse(JSON.stringify(manager.publicState())), {
     turnNumber: 1, round: 1, market: manager.publicState().market, livestockPolicy: "BETA_SPLIT",
-    currentTurn: { playerId: "p1", phase: "AFTER_ACQUISITION", acquisition: disclosure, attackAvailable: false, attack: null, purchaseAvailable: true, purchase: null },
+    skillDeckRemaining: 20,
+    currentTurn: { playerId: "p1", phase: "AFTER_ACQUISITION", acquisition: disclosure, attackAvailable: false, attack: null, purchaseAvailable: true, purchase: null, pendingDefense: null, skillActions: [] },
     players: [
-      { playerId: "p1", score: 0, purchasedCards: [], pendingSkillRewards: 0, livestockCount: 2, publicResources: { FIRE: 1, WATER: 1, STONE: 0, WOOD: 0, FOOD: 0 }, hiddenTokenCount: 14, totalTokens: 18 },
-      { playerId: "p2", score: 0, purchasedCards: [], pendingSkillRewards: 0, livestockCount: 0, publicResources: { FIRE: 0, WATER: 0, STONE: 0, WOOD: 0, FOOD: 0 }, hiddenTokenCount: 0, totalTokens: 0 },
+      { playerId: "p1", score: 0, purchasedCards: [], pendingSkillRewards: 0, skillCardCount: 0, livestockCount: 2, publicResources: { FIRE: 1, WATER: 1, STONE: 0, WOOD: 0, FOOD: 0 }, hiddenTokenCount: 14, totalTokens: 18 },
+      { playerId: "p2", score: 0, purchasedCards: [], pendingSkillRewards: 0, skillCardCount: 0, livestockCount: 0, publicResources: { FIRE: 0, WATER: 0, STONE: 0, WOOD: 0, FOOD: 0 }, hiddenTokenCount: 0, totalTokens: 0 },
     ],
   });
   assert.equal(manager.publicState().players[0].publicResources.STONE, 0);

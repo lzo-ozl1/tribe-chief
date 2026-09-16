@@ -1,18 +1,20 @@
 import { Player } from "../player/Player.ts";
 
 export type BasicAttackTarget = "WOOD" | "FOOD";
-export type BasicAttackOutcome = "HIT" | "DEFENDED" | "VOID";
+export type BasicAttackOutcome = "HIT" | "DEFENDED" | "VOID" | "PENDING_DEFENSE";
 
 export interface BasicAttackResult {
   readonly attackerId: string;
   readonly defenderId: string;
   readonly targetResource: BasicAttackTarget;
   readonly outcome: BasicAttackOutcome;
+  readonly defenseSkillUsed?: true;
+  readonly leaderScoreEligible?: false;
 }
 
 /** Resolves one normal fire attack. Turn timing and frequency belong to Turn. */
 export class BasicAttackResolver {
-  resolve(attacker: Player, defender: Player, target: BasicAttackTarget): BasicAttackResult {
+  resolve(attacker: Player, defender: Player, target: BasicAttackTarget, useDefenseSkill = false): BasicAttackResult {
     if (target !== "WOOD" && target !== "FOOD") {
       throw new TypeError("A basic attack can target only WOOD or FOOD");
     }
@@ -34,6 +36,12 @@ export class BasicAttackResolver {
         }
         attacker.spendTokens({ resources: { FIRE: 1 } });
         outcome = "DEFENDED";
+      } else if (useDefenseSkill) {
+        if (!defender.hasSkill("DEFENSE")) throw new Error("Missing defense skill");
+        defender.spendSkill("DEFENSE");
+        attacker.spendTokens({ resources: { FIRE: 1 } });
+        return Object.freeze({ attackerId: attacker.playerId, defenderId: defender.playerId,
+          targetResource: target, outcome: "DEFENDED", defenseSkillUsed: true, leaderScoreEligible: false });
       } else {
         defender.spendTokens({ resources: { [target]: 1 } });
         outcome = "HIT";

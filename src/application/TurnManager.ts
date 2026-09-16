@@ -1,3 +1,6 @@
+import { SkillDeck, createBetaSkillDeck } from "../domain/skill/SkillDeck.ts";
+import type { SkillType, SkillSnapshot } from "../domain/skill/SkillInventory.ts";
+import type { SkillAttackTarget, SkillActionResult, PrivatePeek } from "../domain/skill/SkillAction.ts";
 import { Market } from "../domain/card/Market.ts";
 import type { MarketSlot } from "../domain/card/Market.ts";
 import { createBetaDeck } from "../domain/card/BetaDeck.ts";
@@ -18,6 +21,7 @@ import { sumCounts } from "../domain/shared/count.ts";
 export interface TurnManagerOptions {
   readonly deck?: readonly PointCard[];
   readonly livestockPolicy?: LivestockPolicy;
+  readonly skillDeck?: readonly SkillType[];
 }
 
 export interface PlayerSetup extends PlayerInitialState {
@@ -29,6 +33,7 @@ export interface PublicPlayerState {
   readonly score: number;
   readonly purchasedCards: readonly PointCardSnapshot[];
   readonly pendingSkillRewards: number;
+  readonly skillCardCount: number;
   readonly livestockCount: number;
   readonly publicResources: ResourceSnapshot;
   readonly hiddenTokenCount: number;
@@ -39,6 +44,8 @@ export interface PrivatePlayerState extends PublicPlayerState {
   readonly basicResources: ResourceSnapshot;
   readonly hiddenResources: ResourceSnapshot;
   readonly excessTokens: number;
+  readonly skills: SkillSnapshot;
+  readonly peeks: readonly (PrivatePeek & { readonly turnNumber: number })[];
 }
 
 export interface PublicTurnManagerState {
@@ -46,6 +53,7 @@ export interface PublicTurnManagerState {
   readonly round: number;
   readonly currentTurn: PublicTurnState;
   readonly market: readonly MarketSlot[];
+  readonly skillDeckRemaining: number;
   readonly livestockPolicy: LivestockPolicy;
   readonly players: readonly PublicPlayerState[];
 }
@@ -54,6 +62,8 @@ export interface PublicTurnManagerState {
 export class TurnManager {
   readonly #players: readonly Player[];
   readonly #market: Market;
+  readonly #skillDeck: SkillDeck;
+  readonly #peeks = new Map<string, readonly (PrivatePeek & { readonly turnNumber: number })[]>();
   readonly #livestockPolicy: LivestockPolicy;
   #currentPlayerIndex = 0;
   #turnNumber = 1;
@@ -71,6 +81,7 @@ export class TurnManager {
     const policy = options.livestockPolicy ?? "BETA_SPLIT";
     assertLivestockPolicy(policy);
     this.#livestockPolicy = policy;
+    this.#skillDeck = new SkillDeck(options.skillDeck ?? createBetaSkillDeck());
     this.#market = new Market(players.length, options.deck ?? createBetaDeck());
     this.#players = players;
     this.#turn = new Turn(players[0]!);
@@ -82,12 +93,14 @@ export class TurnManager {
       round: this.#round,
       currentTurn: this.#turn.publicState(),
       market: this.#market.snapshot(),
+      skillDeckRemaining: this.#skillDeck.remaining,
       livestockPolicy: this.#livestockPolicy,
       players: Object.freeze(this.#players.map(player => Object.freeze({
         playerId: player.playerId,
         score: player.score,
         purchasedCards: player.purchasedCards,
         pendingSkillRewards: player.pendingSkillRewards,
+        skillCardCount: player.skillCardCount,
         livestockCount: player.livestockCount,
         publicResources: player.publicResources,
         hiddenTokenCount: player.hiddenTokenCount,
@@ -105,6 +118,7 @@ export class TurnManager {
       score: player.score,
         purchasedCards: player.purchasedCards,
         pendingSkillRewards: player.pendingSkillRewards,
+        skillCardCount: player.skillCardCount,
       livestockCount: player.livestockCount,
       publicResources: player.publicResources,
       hiddenTokenCount: player.hiddenTokenCount,
@@ -112,6 +126,8 @@ export class TurnManager {
       basicResources: player.basicResources,
       hiddenResources: player.hiddenResources,
       excessTokens: player.excessTokens,
+      skills: player.skills,
+      peeks: this.#peeks.get(playerId) ?? Object.freeze([]),
     });
   }
 
@@ -121,12 +137,50 @@ export class TurnManager {
     return this.#turn.attack(playerId, defender, target);
   }
 
+  attackSkill(playerId: string, defenderId: string, target: SkillAttackTarget): SkillActionResult {
+    return this.#turn.attackSkill(playerId, this.#findPlayer(defenderId), target);
+  }
+
+  defenseOptions(playerId: string): Readonly<{ actionId: number; canUseDefenseSkill: boolean }> {
+    return this.#turn.defenseOptions(playerId);
+  }
+
+  respondDefense(playerId: string, turnNumber: number, actionId: number, useSkill: boolean): BasicAttackResult | SkillActionResult {
+    if (turnNumber !== this.#turnNumber) throw new Error("Stale defense turn");
+    return this.#turn.respondDefense(playerId, actionId, useSkill);
+  }
+
+  peekHidden(playerId: string, targetId: string): PrivatePeek {
+    const { peek } = this.#turn.informationSkill(playerId, this.#findPlayer(targetId), "PEEK");
+    const record = Object.freeze({ ...peek!, turnNumber: this.#turnNumber });
+    this.#peeks.set(playerId, Object.freeze([...(this.#peeks.get(playerId) ?? []), record]));
+    return record;
+  }
+
+  revealHidden(playerId: string, targetId: string, faceDownSlot: number): SkillActionResult {
+    return this.#turn.informationSkill(playerId, this.#findPlayer(targetId), "REVEAL", faceDownSlot).action;
+  }
+
+  #findPlayer(playerId: string): Player {
+    const player = this.#players.find(p => p.playerId === playerId);
+    if (!player) throw new Error("Unknown player");
+    return player;
+  }
+
   acquire(playerId: string, choice: AcquisitionChoice): AcquisitionDisclosure {
     return this.#turn.acquire(playerId, choice);
   }
 
   purchase(playerId: string, cardId: string, replacement: ResourceAmounts = {}): CardPurchaseResult {
-    return this.#turn.purchase(playerId, this.#market, cardId, replacement, this.#livestockPolicy);
+    const player = this.#players.find(p => p.playerId === playerId);
+    // Reserve capacity before a successful purchase could award a card.
+    if (player && this.#market.find(cardId).tier === 3 && this.#skillDeck.remaining > 0) sumCounts(player.skillCardCount, 1);
+    const result = this.#turn.purchase(playerId, this.#market, cardId, replacement, this.#livestockPolicy);
+    if (player && result.card.rewardSkillCard) {
+      const skill = this.#skillDeck.peek();
+      if (skill !== null) { player.receiveSkillReward(skill); this.#skillDeck.draw(); }
+    }
+    return result;
   }
 
   endTurn(playerId: string, discard?: TokenAmounts): PublicTurnState {
