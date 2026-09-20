@@ -22,3 +22,9 @@ export type { MarketSlot } from "./domain/card/Market.ts";
 export { CardPurchase } from "./domain/card/CardPurchase.ts";
 export type { CardPurchaseResult } from "./domain/card/CardPurchase.ts";
 export type { TurnManagerOptions } from "./application/TurnManager.ts";
+
+export { SkillInventory, SKILL_TYPES } from "./domain/skill/SkillInventory.ts";
+export type { SkillType, SkillAmounts, SkillSnapshot } from "./domain/skill/SkillInventory.ts";
+export { SkillDeck, createBetaSkillDeck } from "./domain/skill/SkillDeck.ts";
+export type { SkillAttackTarget, SkillActionResult, PrivatePeek } from "./domain/skill/SkillAction.ts";
+export type { PendingDefense } from "./domain/turn/Turn.ts";
